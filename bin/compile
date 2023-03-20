@@ -1,0 +1,81 @@
+#!/bin/bash
+
+export BUILD_DIR=${1:-}
+export CACHE_DIR=${2:-}
+export ENV_DIR=${3:-}
+
+set -e
+set -u
+
+cd $HOME
+
+mkdir -p bin
+export PATH=$BUILD_DIR/bin:$PATH
+
+echo "--> install lix"
+npm install lix
+
+# lix installs its own haxe and haxelib scripts that must override
+# /usr/bin/haxe and /usr/bin/haxelib
+export PATH=$BUILD_DIR/node_modules/.bin/:$PATH
+
+echo "--> install templo"
+haxelib setup $BUILD_DIR/haxelib
+haxelib install templo
+
+echo "--> install temploc2 with templo"
+cd bin
+haxelib run templo
+cd $BUILD_DIR
+
+echo "--> lix install backend"
+cd $BUILD_DIR/backend
+lix scope create
+lix install haxe 4.0.5
+lix use haxe 4.0.5
+lix download
+
+echo "--> lix  install frontend"
+cd $BUILD_DIR/frontend
+lix scope create
+lix use haxe 4.0.5
+lix download
+npm install
+
+echo "--> copy config"
+cd $BUILD_DIR
+cp config.xml.dist config.xml
+
+echo "--> haxe build backend"
+cd $BUILD_DIR/backend
+haxe build.hxml -D i18n_generation;
+
+echo "--> haxe build frontend"
+cd $BUILD_DIR/frontend
+haxe build.hxml
+
+echo "--> generate mtt files"
+cd $BUILD_DIR/lang/fr/tpl/
+neko ../../../backend/temploc2.n -macros macros.mtt -output ../tmp/ *.mtt */*.mtt */*/*.mtt */*/*/*.mtt */*/*/*/*.mtt
+
+cd $BUILD_DIR
+
+echo "--> copy config file"
+cp $BUILD_DIR/config.xml.dist config-raw.xml
+
+echo "--> setup profile script"
+cd $BUILD_DIR
+mkdir -p .profile.d
+
+cat > ".profile.d/update.sh" <<"SH"
+export PATH="$HOME/.apt/usr/sbin:$HOME/bin:$PATH"
+export PSEUDO_CHROOT="$HOME/.apt"
+# Tell Neko where to find its libraries https://nekovm.org/doc/vm/#libraries
+export NEKOPATH=${PSEUDO_CHROOT}/usr/lib/x86_64-linux-gnu/neko/
+# find all perl library paths and prepend ~/.apt to all paths
+export PERL5LIB=$(perl -E 'say join ":", map { "$ENV{PSEUDO_CHROOT}$_" } grep { m!^/usr! } @INC;')
+echo "Running in $PWD"
+perl $HOME/scripts/update-config.pl config-raw.xml config.xml
+SH
+
+echo "--> all done"

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "haxe-neko"
+
+exit 0

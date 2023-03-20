@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cat << EOF
+---
+default_process_types:
+  web: apache2 -D FOREGROUND -f /app/apache-scalingo.conf
+EOF
