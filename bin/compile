@@ -56,7 +56,7 @@ haxe build.hxml
 
 echo "--> generate mtt files"
 cd $BUILD_DIR/lang/fr/tpl/
-neko ../../../backend/temploc2.n -macros macros.mtt -output ../tmp/ *.mtt */*.mtt */*/*.mtt */*/*/*.mtt */*/*/*/*.mtt
+neko ../../../backend/temploc2.n -macros macros.mtt -output ../tmp/ *.mtt */*.mtt */*/*.mtt
 
 cd $BUILD_DIR
 
